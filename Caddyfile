@@ -1,0 +1,54 @@
+{
+	#debug
+	# Uncomment line below to enable staging
+	#acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+
+	#email example@example.org
+
+	dns YOUR_PROVIDER {env.DNS_API_TOKEN}
+}
+
+(block_world) {
+	@block not remote_ip private_ranges
+	abort @block
+}
+
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains;"
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin"
+		X-Robots-Tag "noindex, nofollow, nosnippet, noarchive"
+	}
+}
+
+(log_settings) {
+	log {
+		output file /config/caddy/logs/access.log
+		level WARN
+	}
+}
+
+*.example.org {
+	tls {
+		propagation_delay 120s
+		resolvers 1.1.1.1
+	}
+	import security_headers
+	
+	encode {
+	    zstd
+	    gzip
+	}
+	
+	@test host test.example.org
+	handle @test {
+		reverse_proxy test:8080
+	}
+
+	# Fallback for otherwise unhandled domains
+	handle {
+		abort
+	}
+}
